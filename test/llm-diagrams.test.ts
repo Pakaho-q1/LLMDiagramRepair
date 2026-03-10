@@ -30,7 +30,7 @@ describe('LLM Class Diagram — Hallucinations', () => {
   Animal <-- Dog
   Animal <-- Cat`)
     expect(r.code).not.toMatch(/\s<--\s/)
-    expect(r.code).toMatch(/<\|--)
+    expect(r.code).toMatch(/<\|--/)
   })
 
   test('LLM ใช้ "extends" keyword', () => {
@@ -38,7 +38,7 @@ describe('LLM Class Diagram — Hallucinations', () => {
   class Dog extends Animal
   class Cat extends Animal`)
     expect(r.code).not.toMatch(/extends/)
-    expect(r.code).toMatch(/<\|--)
+    expect(r.code).toMatch(/<\|--/)
   })
 
   test('LLM ใช้ "implements" keyword', () => {

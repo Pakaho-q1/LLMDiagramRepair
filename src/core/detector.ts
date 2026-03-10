@@ -1,5 +1,5 @@
-import type { DetectionResult, DiagramKind } from "../types/index.js";
-import { ALIAS_TO_CANONICAL, DIAGRAM_REGISTRY } from "./registry.js";
+import type { DetectionResult, DiagramKind } from '../types/index.js';
+import { ALIAS_TO_CANONICAL, DIAGRAM_REGISTRY } from './registry.js';
 
 const SORTED_CANDIDATES: Array<{ lower: string; canonical: string }> = [];
 
@@ -23,69 +23,71 @@ interface Heuristic {
 
 const STRUCTURAL_HEURISTICS: Heuristic[] = [
   {
-    kind: "flowchart",
-    canonical: "flowchart",
+    kind: 'flowchart',
+    canonical: 'flowchart',
     test: (lines) =>
-      lines.some((l) => /\w+\s*(-->|---|\|[^|]|\[\[|\(\()/.test(l)),
+      // รับทั้ง indented และ non-indented lines
+      lines.some((l) => /^\s*\w[\w\s]*\s*(-->|---|\|[^|])/.test(l)) ||
+      lines.some((l) => /-->\s*\w[\w[\](){}]*/.test(l)),
   },
   {
-    kind: "sequenceDiagram",
-    canonical: "sequenceDiagram",
+    kind: 'sequenceDiagram',
+    canonical: 'sequenceDiagram',
     test: (lines) =>
       lines.some((l) => /^(participant|actor|note|loop|alt|opt)\s/i.test(l)) ||
       lines.some((l) => /\w+\s*->?>?\s*\w+\s*:/.test(l)),
   },
   {
-    kind: "classDiagram",
-    canonical: "classDiagram",
+    kind: 'classDiagram',
+    canonical: 'classDiagram',
     test: (lines) =>
       lines.some((l) => /^class\s+\w+/.test(l)) ||
       lines.some((l) => /(<\|--|--\|>|<\|\.\.|\.\.\|>|--o|o--)/.test(l)),
   },
   {
-    kind: "stateDiagram-v2",
-    canonical: "stateDiagram-v2",
+    kind: 'stateDiagram-v2',
+    canonical: 'stateDiagram-v2',
     test: (lines) =>
       lines.some((l) => /^\[?\*\]?\s*-->/.test(l)) ||
       lines.some((l) => /^state\s+/.test(l)),
   },
   {
-    kind: "erDiagram",
-    canonical: "erDiagram",
+    kind: 'erDiagram',
+    canonical: 'erDiagram',
     test: (lines) =>
       lines.some((l) => /\|[|o{]--[|o{]\|/.test(l)) ||
       lines.some((l) => /^[A-Z]+\s*\{/.test(l)),
   },
   {
-    kind: "gantt",
-    canonical: "gantt",
+    kind: 'gantt',
+    canonical: 'gantt',
     test: (lines) =>
       lines.some((l) => /^section\s+/i.test(l)) &&
       lines.some((l) => /:\s*\d{4}-\d{2}-\d{2}/.test(l)),
   },
   {
-    kind: "pie",
-    canonical: "pie",
+    kind: 'pie',
+    canonical: 'pie',
     test: (lines) =>
       lines.filter((l) => /^["']?.+["']?\s*:\s*[\d.]+/.test(l)).length >= 2 &&
       !lines.some((l) => /^(flowchart|graph|sequence)/i.test(l)),
   },
   {
-    kind: "xychart-beta",
-    canonical: "xychart-beta",
+    kind: 'xychart-beta',
+    canonical: 'xychart-beta',
     test: (lines) =>
       lines.some((l) => /^(x-axis|y-axis)\s/i.test(l)) &&
       lines.some((l) => /^(bar|line)\s+\[/.test(l)),
   },
   {
-    kind: "gitGraph",
-    canonical: "gitGraph",
+    kind: 'gitGraph',
+    canonical: 'gitGraph',
     test: (lines) =>
       lines.some((l) => /^(commit|branch|checkout|merge)\b/i.test(l)),
   },
   {
-    kind: "mindmap",
-    canonical: "mindmap",
+    kind: 'mindmap',
+    canonical: 'mindmap',
     // Phase 3.1: แก้ heuristic ให้ไม่ false-positive กับ flowchart เล็ก ๆ
     // เพิ่ม negative checks:
     //   1. ไม่มี arrow syntax (-->, ---) → ไม่ใช่ flowchart
@@ -95,8 +97,7 @@ const STRUCTURAL_HEURISTICS: Heuristic[] = [
       // ถ้ามี arrow → น่าจะเป็น flowchart ไม่ใช่ mindmap
       if (lines.some((l) => /-->|---|\-\->/.test(l))) return false;
       // ถ้ามี sequence syntax → ไม่ใช่ mindmap
-      if (lines.some((l) => /^(participant|actor|->|-->)\s/i.test(l)))
-        return false;
+      if (lines.some((l) => /^(participant|actor|->|-->)\s/i.test(l))) return false;
       // ถ้ามี class syntax → ไม่ใช่ mindmap
       if (lines.some((l) => /^class\s+\w+|<\|--|--\|>/.test(l))) return false;
       // ตรวจ indent หลายระดับ (mindmap จริง ๆ มี hierarchy)
@@ -111,29 +112,29 @@ const STRUCTURAL_HEURISTICS: Heuristic[] = [
     },
   },
   {
-    kind: "journey",
-    canonical: "journey",
+    kind: 'journey',
+    canonical: 'journey',
     test: (lines) =>
       lines.some((l) => /^section\s+/i.test(l)) &&
       lines.some((l) => /:\s*\d+\s*:\s*\w+/.test(l)),
   },
   {
-    kind: "timeline",
-    canonical: "timeline",
+    kind: 'timeline',
+    canonical: 'timeline',
     test: (lines) =>
       lines.some((l) => /^section\s+/i.test(l)) &&
       lines.some((l) => /^\s+\d{4}\b/.test(l)),
   },
   {
-    kind: "venn-beta",
-    canonical: "venn-beta",
+    kind: 'venn-beta',
+    canonical: 'venn-beta',
     test: (lines) =>
       lines.some((l) => /^set\s+\w+/i.test(l)) ||
       lines.some((l) => /^union\s+\w+/i.test(l)),
   },
   {
-    kind: "sankey-beta",
-    canonical: "sankey-beta",
+    kind: 'sankey-beta',
+    canonical: 'sankey-beta',
     test: (lines) => lines.some((l) => /^[^,]+,[^,]+,[\d.]+$/.test(l.trim())),
   },
 ];
@@ -149,17 +150,17 @@ export function detectIntent(code: string): DetectionResult | null {
     for (const { lower, canonical } of SORTED_CANDIDATES) {
       if (
         lineLower === lower ||
-        lineLower.startsWith(lower + " ") ||
-        lineLower.startsWith(lower + "\t") ||
-        lineLower.startsWith(lower + "(") ||
-        lineLower.startsWith(lower + "{") ||
-        lineLower.startsWith(lower + "[")
+        lineLower.startsWith(lower + ' ') ||
+        lineLower.startsWith(lower + '\t') ||
+        lineLower.startsWith(lower + '(') ||
+        lineLower.startsWith(lower + '{') ||
+        lineLower.startsWith(lower + '[')
       ) {
         const isCanonical = lineLower.startsWith(canonical.toLowerCase());
         return {
           kind: canonical as DiagramKind,
           canonical,
-          confidence: isCanonical ? "high" : "medium",
+          confidence: isCanonical ? 'high' : 'medium',
           matchedAlias: isCanonical
             ? undefined
             : line.trim().split(/[\s({[]/)[0],
@@ -175,7 +176,7 @@ export function detectIntent(code: string): DetectionResult | null {
       return {
         kind: h.kind,
         canonical: h.canonical,
-        confidence: "low",
+        confidence: 'low',
         firstLine: lines[0],
         lineIndex: 0,
       };
@@ -186,21 +187,21 @@ export function detectIntent(code: string): DetectionResult | null {
 }
 
 function stripPreamble(code: string): string[] {
-  const raw = code.split("\n");
+  const raw = code.split('\n');
   let start = 0;
 
-  if (raw[0]?.trim() === "---") {
-    const end = raw.findIndex((l, i) => i > 0 && l.trim() === "---");
+  if (raw[0]?.trim() === '---') {
+    const end = raw.findIndex((l, i) => i > 0 && l.trim() === '---');
     start = end !== -1 ? end + 1 : 0;
   }
 
   return raw.slice(start).filter((l) => {
     const t = l.trim();
-    return t.length > 0 && !t.startsWith("%%");
+    return t.length > 0 && !t.startsWith('%%');
   });
 }
 
 export function isXYAlias(detection: DetectionResult): boolean {
-  if (detection.canonical !== "xychart-beta") return false;
-  return detection.confidence === "medium" && !!detection.matchedAlias;
+  if (detection.canonical !== 'xychart-beta') return false;
+  return detection.confidence === 'medium' && !!detection.matchedAlias;
 }

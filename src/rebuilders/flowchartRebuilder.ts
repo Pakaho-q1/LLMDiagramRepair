@@ -64,11 +64,21 @@ export function parseLooseFlowchart(code: string): FlowchartModel | null {
     /^(flowchart|graph|flow[-_]?chart|flow[-_]?diagram|network[-_]?diagram|process[-_]?diagram)/.test(
       headerLine,
     );
-  if (!isFlowchart) return null;
 
-  // ── Extract direction ────────────────────────
+  // ── Headerless detection: ถ้าไม่มี keyword แต่ content ดูเหมือน flowchart ──
+  const isHeaderless =
+    !isFlowchart &&
+    lines.some((l) => /^\w[\w\s]*\s*(-->|---|\|[^|])/.test(l) || /-->\s*\w/.test(l)) &&
+    !lines.some((l) => /^(sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|timeline)/i.test(l));
+
+  if (!isFlowchart && !isHeaderless) return null;
+
+  // ── Extract direction (จาก header ถ้ามี, ไม่งั้น default TD) ──
   const dirMatch = lines[0].match(/\b(TD|TB|LR|RL|BT)\b/i);
   const direction = (dirMatch?.[1]?.toUpperCase() ?? 'TD') as FlowchartModel['direction'];
+
+  // ถ้า headerless ให้เริ่ม parse จาก line 0, ถ้ามี header ข้าม line 0
+  const startIdx = isFlowchart ? 1 : 0;
 
   const model: FlowchartModel = {
     direction,
@@ -79,7 +89,7 @@ export function parseLooseFlowchart(code: string): FlowchartModel | null {
 
   let currentSubgraph: Subgraph | null = null;
 
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = startIdx; i < lines.length; i++) {
     const line = lines[i];
 
     // ── subgraph ─────────────────────────────
