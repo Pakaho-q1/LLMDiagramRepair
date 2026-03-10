@@ -1,23 +1,17 @@
-// ============================================================
-// rebuilders/flowchartRebuilder.ts
-// Deterministic Rebuild สำหรับ Flowchart / Graph
-// รองรับ loose format ที่ LLM มักสร้าง รวม graph TD, flowChart ฯลฯ
-// ============================================================
-
-import type { RepairContext, RepairResult } from '../types/index.js';
-
-// ─────────────────────────────────────────────
-// Data Model
-// ─────────────────────────────────────────────
+import type {
+  RepairContext,
+  RepairResult,
+  DiagramKind,
+} from "../types/index.js";
 
 type NodeShape =
-  | 'rect'       // [label]
-  | 'round'      // (label)
-  | 'stadium'    // ([label])
-  | 'diamond'    // {label}
-  | 'hexagon'    // {{label}}
-  | 'circle'     // ((label))
-  | 'default';
+  | "rect"
+  | "round"
+  | "stadium"
+  | "diamond"
+  | "hexagon"
+  | "circle"
+  | "default";
 
 interface FlowNode {
   id: string;
@@ -25,7 +19,7 @@ interface FlowNode {
   shape: NodeShape;
 }
 
-type ArrowStyle = '-->' | '---' | '==>' | '-.->' | '-.->'; 
+type ArrowStyle = "-->" | "---" | "==>" | "-.->" | "-.->";
 
 interface FlowEdge {
   from: string;
@@ -41,21 +35,17 @@ interface Subgraph {
 }
 
 interface FlowchartModel {
-  direction: 'TD' | 'LR' | 'TB' | 'RL' | 'BT';
+  direction: "TD" | "LR" | "TB" | "RL" | "BT";
   nodes: Map<string, FlowNode>;
   edges: FlowEdge[];
   subgraphs: Subgraph[];
 }
 
-// ─────────────────────────────────────────────
-// Parser
-// ─────────────────────────────────────────────
-
 export function parseLooseFlowchart(code: string): FlowchartModel | null {
   const lines = code
-    .split('\n')
+    .split("\n")
     .map((l) => l.trim())
-    .filter((l) => l.length > 0 && !l.startsWith('%%'));
+    .filter((l) => l.length > 0 && !l.startsWith("%%"));
 
   if (!lines.length) return null;
 
@@ -65,19 +55,23 @@ export function parseLooseFlowchart(code: string): FlowchartModel | null {
       headerLine,
     );
 
-  // ── Headerless detection: ถ้าไม่มี keyword แต่ content ดูเหมือน flowchart ──
   const isHeaderless =
     !isFlowchart &&
-    lines.some((l) => /^\w[\w\s]*\s*(-->|---|\|[^|])/.test(l) || /-->\s*\w/.test(l)) &&
-    !lines.some((l) => /^(sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|timeline)/i.test(l));
+    lines.some(
+      (l) => /^\w[\w\s]*\s*(-->|---|\|[^|])/.test(l) || /-->\s*\w/.test(l),
+    ) &&
+    !lines.some((l) =>
+      /^(sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|timeline)/i.test(
+        l,
+      ),
+    );
 
   if (!isFlowchart && !isHeaderless) return null;
 
-  // ── Extract direction (จาก header ถ้ามี, ไม่งั้น default TD) ──
   const dirMatch = lines[0].match(/\b(TD|TB|LR|RL|BT)\b/i);
-  const direction = (dirMatch?.[1]?.toUpperCase() ?? 'TD') as FlowchartModel['direction'];
+  const direction = (dirMatch?.[1]?.toUpperCase() ??
+    "TD") as FlowchartModel["direction"];
 
-  // ถ้า headerless ให้เริ่ม parse จาก line 0, ถ้ามี header ข้าม line 0
   const startIdx = isFlowchart ? 1 : 0;
 
   const model: FlowchartModel = {
@@ -92,8 +86,9 @@ export function parseLooseFlowchart(code: string): FlowchartModel | null {
   for (let i = startIdx; i < lines.length; i++) {
     const line = lines[i];
 
-    // ── subgraph ─────────────────────────────
-    const subgraphMatch = line.match(/^subgraph\s+(\w+)(?:\s*\[["']?(.+?)["']?\])?/i);
+    const subgraphMatch = line.match(
+      /^subgraph\s+(\w+)(?:\s*\[["']?(.+?)["']?\])?/i,
+    );
     if (subgraphMatch) {
       currentSubgraph = {
         id: subgraphMatch[1],
@@ -109,7 +104,6 @@ export function parseLooseFlowchart(code: string): FlowchartModel | null {
       continue;
     }
 
-    // ── edge lines: A --> B, A -- label --> B, A -->|label| B ──
     const edgeParsed = parseEdgeLine(line);
     if (edgeParsed) {
       const { nodes, edges } = edgeParsed;
@@ -125,7 +119,6 @@ export function parseLooseFlowchart(code: string): FlowchartModel | null {
       continue;
     }
 
-    // ── standalone node definition: A[label] ──
     const nodeOnly = parseNodeDefinition(line);
     if (nodeOnly) {
       if (!model.nodes.has(nodeOnly.id)) {
@@ -137,15 +130,10 @@ export function parseLooseFlowchart(code: string): FlowchartModel | null {
     }
   }
 
-  // ต้องมี edge อย่างน้อย 1 เส้น ถึงถือว่าเป็น flowchart ที่ valid
   if (!model.edges.length && model.nodes.size < 2) return null;
 
   return model;
 }
-
-// ─────────────────────────────────────────────
-// Edge Line Parser
-// ─────────────────────────────────────────────
 
 interface EdgeParseResult {
   nodes: FlowNode[];
@@ -153,26 +141,18 @@ interface EdgeParseResult {
 }
 
 function parseEdgeLine(line: string): EdgeParseResult | null {
-  // Pattern: NodeA[label] -->|edgeLabel| NodeB[label] --> NodeC
-  // รองรับ chain: A --> B --> C
-
-  // normalize over-extended arrows ก่อน parse
   const normalized = line
-    .replace(/--{2,}>/g, '-->')
-    .replace(/={3,}>/g, '==>')
-    .replace(/\.-+>/g, '-.->');
+    .replace(/--{2,}>/g, "-->")
+    .replace(/={3,}>/g, "==>")
+    .replace(/\.-+>/g, "-.->");
 
-  // ตรวจว่ามี arrow syntax หรือไม่
   if (!/-->|---|==>|-.->|\.\.\.>/.test(normalized)) return null;
 
   const nodes: FlowNode[] = [];
   const edges: FlowEdge[] = [];
 
-  // Split chain by arrow patterns — รักษา arrow type ไว้
-  // Pattern เช่น: A --> B --> C  หรือ A -->|label| B --- C
   const ARROW_SPLIT = /(-->|---|==>|-\.->|\.\.\.>)(?:\|([^|]*)\|)?/g;
 
-  // แยก segments ออกมา
   const parts: string[] = [];
   const arrows: { style: ArrowStyle; label?: string }[] = [];
 
@@ -191,14 +171,12 @@ function parseEdgeLine(line: string): EdgeParseResult | null {
 
   if (parts.length < 2) return null;
 
-  // Parse each part as node
   for (const part of parts) {
     if (!part) continue;
     const node = parseNodeDefinition(part);
     if (node) nodes.push(node);
   }
 
-  // Create edges between consecutive nodes
   for (let i = 0; i < arrows.length; i++) {
     const fromPart = parts[i];
     const toPart = parts[i + 1];
@@ -208,7 +186,6 @@ function parseEdgeLine(line: string): EdgeParseResult | null {
     const toNode = parseNodeDefinition(toPart);
     if (!fromNode || !toNode) continue;
 
-    // ตรวจ inline edge label: A -- "label" --> B
     let edgeLabel = arrows[i].label;
     if (!edgeLabel) {
       const inlineLabel = fromPart.match(/--\s*["']?(.+?)["']?\s*$/);
@@ -226,53 +203,38 @@ function parseEdgeLine(line: string): EdgeParseResult | null {
   return edges.length > 0 ? { nodes, edges } : null;
 }
 
-// ─────────────────────────────────────────────
-// Node Definition Parser
-// ─────────────────────────────────────────────
-
 function parseNodeDefinition(raw: string): FlowNode | null {
   const s = raw.trim();
   if (!s) return null;
 
-  // id((label)) — circle
   let m = s.match(/^(\w[\w-]*)(?:\s*\(\((.+?)\)\))?$/);
-  if (m && m[2]) return { id: m[1], label: stripQuotes(m[2]), shape: 'circle' };
+  if (m && m[2]) return { id: m[1], label: stripQuotes(m[2]), shape: "circle" };
 
-  // id([label]) — stadium
   m = s.match(/^(\w[\w-]*)(?:\s*\(\[(.+?)\]\))?$/);
-  if (m && m[2]) return { id: m[1], label: stripQuotes(m[2]), shape: 'stadium' };
+  if (m && m[2])
+    return { id: m[1], label: stripQuotes(m[2]), shape: "stadium" };
 
-  // id{{label}} — hexagon
   m = s.match(/^(\w[\w-]*)\s*\{\{(.+?)\}\}$/);
-  if (m) return { id: m[1], label: stripQuotes(m[2]), shape: 'hexagon' };
+  if (m) return { id: m[1], label: stripQuotes(m[2]), shape: "hexagon" };
 
-  // id{label} — diamond
   m = s.match(/^(\w[\w-]*)\s*\{(.+?)\}$/);
-  if (m) return { id: m[1], label: stripQuotes(m[2]), shape: 'diamond' };
+  if (m) return { id: m[1], label: stripQuotes(m[2]), shape: "diamond" };
 
-  // id[label] — rect
   m = s.match(/^(\w[\w-]*)\s*\[(.+?)\]$/);
-  if (m) return { id: m[1], label: stripQuotes(m[2]), shape: 'rect' };
+  if (m) return { id: m[1], label: stripQuotes(m[2]), shape: "rect" };
 
-  // id(label) — round
   m = s.match(/^(\w[\w-]*)\s*\((.+?)\)$/);
-  if (m) return { id: m[1], label: stripQuotes(m[2]), shape: 'round' };
+  if (m) return { id: m[1], label: stripQuotes(m[2]), shape: "round" };
 
-  // bare id (no shape declaration)
   m = s.match(/^(\w[\w-]*)$/);
-  if (m) return { id: m[1], label: undefined, shape: 'default' };
+  if (m) return { id: m[1], label: undefined, shape: "default" };
 
   return null;
 }
 
-// ─────────────────────────────────────────────
-// Builder
-// ─────────────────────────────────────────────
-
 export function buildFlowchart(model: FlowchartModel): string {
   const lines: string[] = [`flowchart ${model.direction}`];
 
-  // ── Node definitions (ที่มี label เท่านั้น — bare nodes ไม่ต้องประกาศแยก) ──
   const nodesInEdges = new Set<string>();
   for (const edge of model.edges) {
     nodesInEdges.add(edge.from);
@@ -280,18 +242,16 @@ export function buildFlowchart(model: FlowchartModel): string {
   }
 
   for (const [id, node] of model.nodes) {
-    // ถ้า node ไม่อยู่ใน edge เลย และมี label → ต้องประกาศแยก
     if (!nodesInEdges.has(id) && node.label) {
       lines.push(`  ${formatNode(node)}`);
     }
   }
 
-  // ── Subgraphs ────────────────────────────────
   const subgraphNodeIds = new Set<string>();
   for (const sg of model.subgraphs) {
     for (const id of sg.nodeIds) subgraphNodeIds.add(id);
 
-    const label = sg.label ? `["${escapeQuotes(sg.label)}"]` : '';
+    const label = sg.label ? `["${escapeQuotes(sg.label)}"]` : "";
     lines.push(`  subgraph ${sg.id}${label}`);
     for (const nodeId of sg.nodeIds) {
       const node = model.nodes.get(nodeId);
@@ -300,7 +260,6 @@ export function buildFlowchart(model: FlowchartModel): string {
     lines.push(`  end`);
   }
 
-  // ── Edges ────────────────────────────────────
   for (const edge of model.edges) {
     const fromNode = model.nodes.get(edge.from);
     const toNode = model.nodes.get(edge.to);
@@ -315,30 +274,33 @@ export function buildFlowchart(model: FlowchartModel): string {
     lines.push(`  ${fromStr} ${arrowStr} ${toStr}`);
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function formatNode(node: FlowNode): string {
-  if (!node.label || node.shape === 'default') return node.id;
+  if (!node.label || node.shape === "default") return node.id;
   const escaped = escapeQuotes(node.label);
   switch (node.shape) {
-    case 'rect':    return `${node.id}["${escaped}"]`;
-    case 'round':   return `${node.id}("${escaped}")`;
-    case 'stadium': return `${node.id}(["${escaped}"])`;
-    case 'diamond': return `${node.id}{"${escaped}"}`;
-    case 'hexagon': return `${node.id}{{"${escaped}"}}`;
-    case 'circle':  return `${node.id}(("${escaped}"))`;
-    default:        return `${node.id}["${escaped}"]`;
+    case "rect":
+      return `${node.id}["${escaped}"]`;
+    case "round":
+      return `${node.id}("${escaped}")`;
+    case "stadium":
+      return `${node.id}(["${escaped}"])`;
+    case "diamond":
+      return `${node.id}{"${escaped}"}`;
+    case "hexagon":
+      return `${node.id}{{"${escaped}"}}`;
+    case "circle":
+      return `${node.id}(("${escaped}"))`;
+    default:
+      return `${node.id}["${escaped}"]`;
   }
 }
 
-// ─────────────────────────────────────────────
-// Repair Pass
-// ─────────────────────────────────────────────
-
 export const flowchartRebuilderPass = {
-  name: 'flowchart-rebuilder',
-  appliesTo: ['flowchart'] as DiagramKind[],
+  name: "flowchart-rebuilder",
+  appliesTo: ["flowchart"] as DiagramKind[],
   isRebuilder: true,
 
   repair(ctx: RepairContext): RepairResult {
@@ -365,12 +327,8 @@ export const flowchartRebuilderPass = {
   },
 };
 
-// ─────────────────────────────────────────────
-// Utilities
-// ─────────────────────────────────────────────
-
 function stripQuotes(s: string): string {
-  return s.replace(/^["']|["']$/g, '').trim();
+  return s.replace(/^["']|["']$/g, "").trim();
 }
 
 function escapeQuotes(s: string): string {

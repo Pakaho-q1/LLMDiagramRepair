@@ -1,4 +1,4 @@
-// MermaidBlock.tsx
+
 import React, { useState, useEffect } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -97,7 +97,7 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
                 height="15"
                 viewBox="0 0 24 24"
                 fill="none"
-                xmlns="http://www.w3.org/2000/svg"
+                xmlns="http:
               >
                 <path
                   d="M10 10.4996L7.91896 9.06884C5.48539 7.39575 4.2686 6.55921 3.28823 6.93255C3.13803 6.98975 2.99528 7.06484 2.86306 7.15621C2 7.75256 2 9.22917 2 12.1824C2 15.0044 2 16.4155 2.83131 17.0141C2.95911 17.1061 3.09732 17.1827 3.24309 17.2423C4.1913 17.63 5.38785 16.8821 7.78094 15.3865L10 13.9995V10.4996Z"
@@ -122,7 +122,7 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
                 height="15"
                 viewBox="0 0 24 24"
                 fill="none"
-                xmlns="http://www.w3.org/2000/svg"
+                xmlns="http:
               >
                 <path
                   d="M3 3H21"

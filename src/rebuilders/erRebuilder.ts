@@ -1,17 +1,46 @@
-// rebuilders/erRebuilder.ts
-import type { RepairContext, RepairResult, DiagramKind } from '../types/index.js';
+import type {
+  RepairContext,
+  RepairResult,
+  DiagramKind,
+} from "../types/index.js";
 
-type Cardinality = '||' | '|{' | '}{' | '|o' | 'o|' | 'o{' | '}o' | '||';
-interface ERAttribute { type: string; name: string; isPK?: boolean; isFK?: boolean; comment?: string; }
-interface EREntity { name: string; attributes: ERAttribute[]; }
-interface ERRelationship { from: string; to: string; fromCard: string; toCard: string; relType: 'identifying' | 'non-identifying'; label: string; }
-interface ERModel { entities: Map<string, EREntity>; relationships: ERRelationship[]; }
+type Cardinality = "||" | "|{" | "}{" | "|o" | "o|" | "o{" | "}o" | "||";
+interface ERAttribute {
+  type: string;
+  name: string;
+  isPK?: boolean;
+  isFK?: boolean;
+  comment?: string;
+}
+interface EREntity {
+  name: string;
+  attributes: ERAttribute[];
+}
+interface ERRelationship {
+  from: string;
+  to: string;
+  fromCard: string;
+  toCard: string;
+  relType: "identifying" | "non-identifying";
+  label: string;
+}
+interface ERModel {
+  entities: Map<string, EREntity>;
+  relationships: ERRelationship[];
+}
 
 const CARD_MAP: Record<string, string> = {
-  'one': '||', '1': '||', 'only one': '||',
-  'zero or one': '|o', '0..1': '|o',
-  'zero or more': '}o', 'many': '}|', '*': '}|',
-  'one or more': '}|', '1..*': '}|', '+': '}|',
+  one: "||",
+  "1": "||",
+  "only one": "||",
+  "zero or one": "|o",
+  "0..1": "|o",
+  "zero or more": "}o",
+  many: "}|",
+  "*": "}|",
+  "one or more": "}|",
+  "1..*": "}|",
+  "+": "}|",
 };
 
 function normalizeCard(s: string): string {
@@ -19,13 +48,21 @@ function normalizeCard(s: string): string {
   return CARD_MAP[k] ?? s;
 }
 
-function stripQuotes(s: string) { return s.replace(/^["'`]|["'`]$/g, '').trim(); }
+function stripQuotes(s: string) {
+  return s.replace(/^["'`]|["'`]$/g, "").trim();
+}
 
 export function parseLooseER(code: string): ERModel | null {
-  const lines = code.split('\n').map(l => l.trim()).filter(Boolean);
+  const lines = code
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   if (!lines.length) return null;
 
-  const isER = /^(erDiagram|er\b|erdDiagram|er[-_]diagram|ERDiagram|ER Diagram|entity|entityRelationship|dbDiagram|databaseDiagram|dataModel)/i.test(lines[0]);
+  const isER =
+    /^(erDiagram|er\b|erdDiagram|er[-_]diagram|ERDiagram|ER Diagram|entity|entityRelationship|dbDiagram|databaseDiagram|dataModel)/i.test(
+      lines[0],
+    );
   if (!isER) return null;
 
   const model: ERModel = { entities: new Map(), relationships: [] };
@@ -33,59 +70,81 @@ export function parseLooseER(code: string): ERModel | null {
   let inBlock = false;
 
   function getOrCreate(name: string): EREntity {
-    if (!model.entities.has(name)) model.entities.set(name, { name, attributes: [] });
+    if (!model.entities.has(name))
+      model.entities.set(name, { name, attributes: [] });
     return model.entities.get(name)!;
   }
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
-    if (!line || line.startsWith('%%')) continue;
+    if (!line || line.startsWith("%%")) continue;
 
-    if (line === '}') { currentEntity = null; inBlock = false; continue; }
+    if (line === "}") {
+      currentEntity = null;
+      inBlock = false;
+      continue;
+    }
 
-    // entity block open: ENTITY {
     const blockOpen = line.match(/^(\w+)\s*\{/);
-    if (blockOpen) { currentEntity = getOrCreate(blockOpen[1]); inBlock = true; continue; }
+    if (blockOpen) {
+      currentEntity = getOrCreate(blockOpen[1]);
+      inBlock = true;
+      continue;
+    }
 
-    // attribute inside entity
     if (inBlock && currentEntity) {
-      const attrMatch = line.match(/^(\w+)\s+(\w+)(?:\s+(PK|FK|UK))?(?:\s+"([^"]+)")?/);
+      const attrMatch = line.match(
+        /^(\w+)\s+(\w+)(?:\s+(PK|FK|UK))?(?:\s+"([^"]+)")?/,
+      );
       if (attrMatch) {
         currentEntity.attributes.push({
-          type: attrMatch[1], name: attrMatch[2],
-          isPK: attrMatch[3] === 'PK', isFK: attrMatch[3] === 'FK',
+          type: attrMatch[1],
+          name: attrMatch[2],
+          isPK: attrMatch[3] === "PK",
+          isFK: attrMatch[3] === "FK",
           comment: attrMatch[4],
         });
       }
       continue;
     }
 
-    // relationship: A ||--o{ B : "label"
-    // also handle: A "1" -- "many" B : label  (loose format)
-    const relMatch = line.match(/^(\w+)\s+([|o{}*\-]+)\s*--\s*([|o{}*\-]+)\s+(\w+)\s*:\s*"?([^"]*)"?/);
+    const relMatch = line.match(
+      /^(\w+)\s+([|o{}*\-]+)\s*--\s*([|o{}*\-]+)\s+(\w+)\s*:\s*"?([^"]*)"?/,
+    );
     if (relMatch) {
       getOrCreate(relMatch[1]);
       getOrCreate(relMatch[4]);
       model.relationships.push({
-        from: relMatch[1], to: relMatch[4],
-        fromCard: relMatch[2], toCard: relMatch[3],
-        relType: relMatch[2].includes('--') ? 'non-identifying' : 'identifying',
+        from: relMatch[1],
+        to: relMatch[4],
+        fromCard: relMatch[2],
+        toCard: relMatch[3],
+        relType: relMatch[2].includes("--") ? "non-identifying" : "identifying",
         label: stripQuotes(relMatch[5]),
       });
       continue;
     }
 
-    // loose: A has many B  /  A belongs_to B
-    const verbMatch = line.match(/^(\w+)\s+(has|contains|references|belongs.?to|relates.?to)\s+(many|one|some)?\s*(\w+)/i);
+    const verbMatch = line.match(
+      /^(\w+)\s+(has|contains|references|belongs.?to|relates.?to)\s+(many|one|some)?\s*(\w+)/i,
+    );
     if (verbMatch) {
-      const from = verbMatch[1]; const to = verbMatch[4];
-      const isMany = /many|some/i.test(verbMatch[3] ?? '');
-      getOrCreate(from); getOrCreate(to);
-      model.relationships.push({ from, to, fromCard: '||', toCard: isMany ? '}|' : '||', relType: 'non-identifying', label: verbMatch[2] });
+      const from = verbMatch[1];
+      const to = verbMatch[4];
+      const isMany = /many|some/i.test(verbMatch[3] ?? "");
+      getOrCreate(from);
+      getOrCreate(to);
+      model.relationships.push({
+        from,
+        to,
+        fromCard: "||",
+        toCard: isMany ? "}|" : "||",
+        relType: "non-identifying",
+        label: verbMatch[2],
+      });
       continue;
     }
 
-    // bare entity name
     const bareMatch = line.match(/^(\w+)$/);
     if (bareMatch) getOrCreate(bareMatch[1]);
   }
@@ -95,11 +154,13 @@ export function parseLooseER(code: string): ERModel | null {
 }
 
 export function buildER(model: ERModel): string {
-  const lines = ['erDiagram'];
+  const lines = ["erDiagram"];
 
   for (const rel of model.relationships) {
-    const sep = rel.relType === 'identifying' ? '--' : '--';
-    lines.push(`  ${rel.from} ${rel.fromCard}--${rel.toCard} ${rel.to} : "${rel.label}"`);
+    const sep = rel.relType === "identifying" ? "--" : "--";
+    lines.push(
+      `  ${rel.from} ${rel.fromCard}--${rel.toCard} ${rel.to} : "${rel.label}"`,
+    );
   }
 
   for (const entity of model.entities.values()) {
@@ -107,26 +168,41 @@ export function buildER(model: ERModel): string {
     lines.push(`  ${entity.name} {`);
     for (const attr of entity.attributes) {
       let line = `    ${attr.type} ${attr.name}`;
-      if (attr.isPK) line += ' PK';
-      else if (attr.isFK) line += ' FK';
+      if (attr.isPK) line += " PK";
+      else if (attr.isFK) line += " FK";
       if (attr.comment) line += ` "${attr.comment}"`;
       lines.push(line);
     }
-    lines.push('  }');
+    lines.push("  }");
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 export const erRebuilderPass = {
-  name: 'er-rebuilder',
+  name: "er-rebuilder",
   isRebuilder: true,
-  appliesTo: ['erDiagram'] as DiagramKind[],
+  appliesTo: ["erDiagram"] as DiagramKind[],
   repair(ctx: RepairContext): RepairResult {
     const model = parseLooseER(ctx.code);
-    if (!model) return { passName: this.name, changed: false, code: ctx.code, repairs: [] };
+    if (!model)
+      return {
+        passName: this.name,
+        changed: false,
+        code: ctx.code,
+        repairs: [],
+      };
     const rebuilt = buildER(model);
     const changed = rebuilt !== ctx.code;
-    return { passName: this.name, changed, code: rebuilt, repairs: changed ? [`Rebuilt erDiagram (${model.entities.size} entities, ${model.relationships.length} relationships)`] : [] };
+    return {
+      passName: this.name,
+      changed,
+      code: rebuilt,
+      repairs: changed
+        ? [
+            `Rebuilt erDiagram (${model.entities.size} entities, ${model.relationships.length} relationships)`,
+          ]
+        : [],
+    };
   },
 };

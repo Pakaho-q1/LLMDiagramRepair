@@ -3,7 +3,7 @@ export {
   defaultEngine,
   transformMermaid,
   transformMermaidFull,
-} from './core/engine.js';
+} from "./core/engine.js";
 
 export type {
   DiagramKind,
@@ -16,7 +16,7 @@ export type {
   EngineOptions,
   PluginRegistration,
   Plugin,
-} from './types/index.js';
+} from "./types/index.js";
 
 export {
   DIAGRAM_REGISTRY,
@@ -25,138 +25,135 @@ export {
   getEntry,
   isXYChartAlias,
   allAliasesFor,
-} from './core/registry.js';
+} from "./core/registry.js";
 
-export { detectIntent, isXYAlias } from './core/detector.js';
+export { detectIntent, isXYAlias } from "./core/detector.js";
 
 export {
   extractMermaidBlock,
   sanitize,
   normalizeIndentation,
   preprocess,
-} from './core/sanitizer.js';
+} from "./core/sanitizer.js";
 
 export {
   isMermaidStreaming,
   hasMermaidBlock,
   getStreamingPartial,
-  // Phase 3.2: export StreamingTimeoutTracker สำหรับ custom UI
   StreamingTimeoutTracker,
-} from './core/streaming.js';
+} from "./core/streaming.js";
 
 export {
   parseLooseXYChart,
   buildXYChart,
   xyChartRebuilderPass,
-} from './rebuilders/xyChartRebuilder.js';
+} from "./rebuilders/xyChartRebuilder.js";
 
 export {
   parseLooseVenn,
   buildVenn,
   vennRebuilderPass,
-} from './rebuilders/vennRebuilder.js';
+} from "./rebuilders/vennRebuilder.js";
 
 export {
   parseLoosePie,
   buildPie,
   pieRebuilderPass,
-} from './rebuilders/pieRebuilder.js';
+} from "./rebuilders/pieRebuilder.js";
 
-// Phase: Critical Structure Recovery — Capability 7
 export {
   parseLooseFlowchart,
   buildFlowchart,
   flowchartRebuilderPass,
-} from './rebuilders/flowchartRebuilder.js';
+} from "./rebuilders/flowchartRebuilder.js";
 
 export {
   parseLooseSequence,
   buildSequence,
   sequenceRebuilderPass,
-} from './rebuilders/sequenceRebuilder.js';
+} from "./rebuilders/sequenceRebuilder.js";
 
 export {
   parseLooseClassDiagram,
   buildClassDiagram,
   classRebuilderPass,
-} from './rebuilders/classRebuilder.js';
+} from "./rebuilders/classRebuilder.js";
 
 export {
   parseLooseRadar,
   buildRadar,
   radarRebuilderPass,
-} from './rebuilders/radarRebuilder.js';
+} from "./rebuilders/radarRebuilder.js";
 
 export {
   parseLooseState,
   buildState,
   stateRebuilderPass,
-} from './rebuilders/stateRebuilder.js';
+} from "./rebuilders/stateRebuilder.js";
 export {
   parseLooseER,
   buildER,
   erRebuilderPass,
-} from './rebuilders/erRebuilder.js';
+} from "./rebuilders/erRebuilder.js";
 export {
   parseLooseGantt,
   buildGantt,
   ganttRebuilderPass,
-} from './rebuilders/ganttRebuilder.js';
+} from "./rebuilders/ganttRebuilder.js";
 export {
   parseLooseGitGraph,
   buildGitGraph,
   gitGraphRebuilderPass,
-} from './rebuilders/gitGraphRebuilder.js';
+} from "./rebuilders/gitGraphRebuilder.js";
 export {
   parseLooseMindmap,
   buildMindmap,
   mindmapRebuilderPass,
-} from './rebuilders/mindmapRebuilder.js';
+} from "./rebuilders/mindmapRebuilder.js";
 export {
   parseLooseTimeline,
   buildTimeline,
   timelineRebuilderPass,
-} from './rebuilders/timelineRebuilder.js';
+} from "./rebuilders/timelineRebuilder.js";
 export {
   parseLooseSankey,
   buildSankey,
   sankeyRebuilderPass,
-} from './rebuilders/sankeyRebuilder.js';
+} from "./rebuilders/sankeyRebuilder.js";
 export {
   parseLooseQuadrant,
   buildQuadrant,
   quadrantRebuilderPass,
-} from './rebuilders/quadrantRebuilder.js';
+} from "./rebuilders/quadrantRebuilder.js";
 export {
   parseLooseJourney,
   buildJourney,
   journeyRebuilderPass,
-} from './rebuilders/journeyRebuilder.js';
+} from "./rebuilders/journeyRebuilder.js";
 export {
   parseLooseKanban,
   buildKanban,
   kanbanRebuilderPass,
-} from './rebuilders/kanbanRebuilder.js';
+} from "./rebuilders/kanbanRebuilder.js";
 export {
   parseLooseTreemap,
   buildTreemap,
   treemapRebuilderPass,
-} from './rebuilders/treemapRebuilder.js';
+} from "./rebuilders/treemapRebuilder.js";
 export {
   parseLooseArchitecture,
   buildArchitecture,
   architectureRebuilderPass,
-} from './rebuilders/architectureRebuilder.js';
+} from "./rebuilders/architectureRebuilder.js";
 export {
   parseLooseRequirement,
   buildRequirement,
   requirementRebuilderPass,
-} from './rebuilders/requirementRebuilder.js';
+} from "./rebuilders/requirementRebuilder.js";
 
 export {
   BUILTIN_PASSES,
-  // Phase 4: export new passes สำหรับ custom plugin composition
   timelineRepairPass,
   requirementDiagramRepairPass,
   journeyRepairPass,
-} from './plugins/builtins.js';
+} from "./plugins/builtins.js";

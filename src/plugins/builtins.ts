@@ -24,22 +24,12 @@ function makePass(
   };
 }
 
-// ─────────────────────────────────────────────
-// Utilities
-// ─────────────────────────────────────────────
-
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/**
- * ตรวจว่า position ที่ให้มาอยู่ภายใน bracket หรือ quote หรือไม่
- * ใช้ป้องกัน regex แก้ไข label text โดยไม่ตั้งใจ
- */
 function isInsideBracketOrQuote(line: string, matchIndex: number): boolean {
-  // ตรวจ double quote: "..."
   let inDoubleQuote = false;
-  // ตรวจ square bracket: [...]
   let bracketDepth = 0;
 
   for (let i = 0; i < matchIndex && i < line.length; i++) {
@@ -57,11 +47,6 @@ function isInsideBracketOrQuote(line: string, matchIndex: number): boolean {
 
   return inDoubleQuote || bracketDepth > 0;
 }
-
-// ─────────────────────────────────────────────
-// Passes
-// ─────────────────────────────────────────────
-
 export const keywordNormalizationPass: RepairPass = makePass(
   "keyword-normalization",
   undefined,
@@ -101,8 +86,6 @@ export const flowchartRepairPass: RepairPass = makePass(
     const repairs: string[] = [];
     let fixed = code;
 
-    // แก้ over-extended arrows: ---> → -->
-    // ใช้ line-by-line เพื่อตรวจสอบว่าไม่อยู่ใน label bracket/quote
     if (/--{2,}>/.test(fixed)) {
       fixed = fixed
         .split("\n")
@@ -116,13 +99,9 @@ export const flowchartRepairPass: RepairPass = makePass(
       repairs.push("Fixed over-extended arrows (---> → -->)");
     }
 
-    // แก้ -- ที่ขาด > แต่ระวัง label ที่มี "--" อยู่
-    // เปลี่ยนจาก global replace เป็น line-by-line พร้อม context check
     const fixedLines = fixed.split("\n").map((line) => {
-      // ถ้าบรรทัดนี้มี --> หรือ --- อยู่แล้ว ไม่ต้องแก้
       if (/-->|---/.test(line)) return line;
 
-      // ตรวจหา pattern: word -- word (ที่ไม่มี > ต่อท้าย)
       return line.replace(
         /(\b\w+\b)\s*--\s+(\b\w+\b)/g,
         (match, a, b, offset) => {
@@ -134,31 +113,22 @@ export const flowchartRepairPass: RepairPass = makePass(
     });
     fixed = fixedLines.join("\n");
 
-    // แก้ over-extended thick arrows: ===> → ==>
     if (/={3,}>/.test(fixed)) {
       fixed = fixed.replace(/={3,}>/g, "==>");
       repairs.push("Fixed over-extended thick arrows (===> → ==>)");
     }
-
-    // แก้ dotted arrow format: .- → -.->
     if (/\.-+>/.test(fixed)) {
       fixed = fixed.replace(/\.-+>/g, "-.->");
       repairs.push("Fixed dotted arrow format (.- → -.->)");
     }
-
-    // อัพเกรด "graph TD" → "flowchart TD"
     if (/^graph\s+(TD|TB|LR|RL|BT)/im.test(fixed)) {
       fixed = fixed.replace(/^graph\s+(TD|TB|LR|RL|BT)/im, "flowchart $1");
       repairs.push('Upgraded "graph" keyword → "flowchart"');
     }
-
-    // เติม direction ที่ขาด: "flowchart\n" → "flowchart TD\n"
     if (/^flowchart\s*\n/im.test(fixed)) {
       fixed = fixed.replace(/^flowchart\s*\n/im, "flowchart TD\n");
       repairs.push('Added missing direction "TD" to flowchart');
     }
-
-    // เติม header ที่ขาดหาย
     if (
       !/^(flowchart|graph)\s+/im.test(fixed) &&
       /\w+\s*(-->|---)/.test(fixed)
@@ -167,13 +137,11 @@ export const flowchartRepairPass: RepairPass = makePass(
       repairs.push('Injected missing "flowchart TD" header');
     }
 
-    // แก้ single quote ใน node label: node['text'] → node["text"]
     fixed = fixed.replace(
       /(\w+)\[([^\]"]*'[^\]']*'[^\]]*)\]/g,
       (_, id, label) => `${id}["${label.replace(/'/g, "")}"]`,
     );
 
-    // เติม end ที่ขาดหาย สำหรับ subgraph
     const subgraphCount = (fixed.match(/^\s*subgraph\b/gim) ?? []).length;
     const endCount = (fixed.match(/^\s*end\b/gim) ?? []).length;
     if (subgraphCount > endCount) {
@@ -230,20 +198,15 @@ export const classDiagramRepairPass: RepairPass = makePass(
     const repairs: string[] = [];
     let fixed = code;
 
-    // Normalize deprecated v2 keyword
     if (/^classDiagram-v2\b/im.test(fixed)) {
       fixed = fixed.replace(/^classDiagram-v2\b/im, "classDiagram");
       repairs.push("Normalized classDiagram-v2 → classDiagram");
     }
-
-    // LLM มักใช้ <-- แทน <|-- สำหรับ inheritance
     if (/\s+<--\s+/.test(fixed)) {
       fixed = fixed.replace(/\s+<--\s+/g, " <|-- ");
       repairs.push("Fixed inheritance arrow: <-- → <|--");
     }
 
-    // LLM มักใช้ extends/implements keyword แทน relationship syntax
-    // "class Dog extends Animal" → "Dog <|-- Animal"
     fixed = fixed.replace(
       /^(\s*)class\s+(\w+)\s+extends\s+(\w+)/gim,
       (_, indent, child, parent) => {
@@ -264,13 +227,11 @@ export const classDiagramRepairPass: RepairPass = makePass(
       },
     );
 
-    // เติม header ที่ขาด
     if (!fixed.toLowerCase().startsWith("classdiagram")) {
       fixed = "classDiagram\n" + fixed;
       repairs.push('Injected missing "classDiagram" header');
     }
 
-    // แก้ unclosed class blocks
     const opens = (fixed.match(/\{/g) ?? []).length;
     const closes = (fixed.match(/\}/g) ?? []).length;
     if (opens > closes) {
@@ -549,11 +510,6 @@ export const quadrantRepairPass: RepairPass = makePass(
   },
 );
 
-// ─────────────────────────────────────────────
-// Phase 4: New Repair Passes
-// ─────────────────────────────────────────────
-
-/** Phase 4.1 — Timeline repair */
 export const timelineRepairPass: RepairPass = makePass(
   "timeline-repair",
   ["timeline"],
@@ -561,20 +517,16 @@ export const timelineRepairPass: RepairPass = makePass(
     const repairs: string[] = [];
     let fixed = code;
 
-    // เติม header ที่ขาด
     if (!fixed.toLowerCase().startsWith("timeline")) {
       fixed = "timeline\n" + fixed;
       repairs.push('Injected missing "timeline" header');
     }
 
-    // แก้ year ที่ไม่มี indent: "2020 : event" → "  section 2020\n    event"
-    // (timeline ต้องการ section สำหรับแต่ละปี)
     const lines = fixed.split("\n");
     const out: string[] = [];
     let hasSection = lines.some((l) => /^\s*section\s+/i.test(l));
 
     if (!hasSection) {
-      // ลอง convert bare year lines → section format
       for (const line of lines) {
         const yearLine = line.match(/^(\s*)((\d{4})\s*[:\-–]\s*(.+))$/);
         if (yearLine) {
@@ -595,7 +547,6 @@ export const timelineRepairPass: RepairPass = makePass(
   },
 );
 
-/** Phase 4.2 — Requirement Diagram repair */
 export const requirementDiagramRepairPass: RepairPass = makePass(
   "requirement-repair",
   ["requirementDiagram"],
@@ -608,7 +559,6 @@ export const requirementDiagramRepairPass: RepairPass = makePass(
       repairs.push('Injected missing "requirementDiagram" header');
     }
 
-    // แก้ block ที่ไม่มี closing brace
     const opens = (fixed.match(/\{/g) ?? []).length;
     const closes = (fixed.match(/\}/g) ?? []).length;
     if (opens > closes) {
@@ -626,7 +576,6 @@ export const requirementDiagramRepairPass: RepairPass = makePass(
   },
 );
 
-/** Phase 4.3 — Journey repair */
 export const journeyRepairPass: RepairPass = makePass(
   "journey-repair",
   ["journey"],
@@ -639,14 +588,11 @@ export const journeyRepairPass: RepairPass = makePass(
       repairs.push('Injected missing "journey" header');
     }
 
-    // แก้ task ที่ขาด score หรือ actor
-    // format ที่ถูกต้อง: "  TaskName: score: Actor1, Actor2"
     const lines = fixed.split("\n");
     const out: string[] = [];
     for (const line of lines) {
       const taskMatch = line.match(/^(\s+)(\w[^:]+):\s*(\d+)\s*$/);
       if (taskMatch) {
-        // มี score แต่ไม่มี actor → เพิ่ม "Me" เป็น default
         out.push(`${taskMatch[1]}${taskMatch[2]}: ${taskMatch[3]}: Me`);
         repairs.push(
           `Added missing actor to journey task: "${taskMatch[2].trim()}"`,
@@ -674,7 +620,6 @@ export const BUILTIN_PASSES: RepairPass[] = [
   mindmapRepairPass,
   sankeyRepairPass,
   quadrantRepairPass,
-  // Phase 4: new passes
   timelineRepairPass,
   requirementDiagramRepairPass,
   journeyRepairPass,

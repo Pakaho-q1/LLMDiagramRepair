@@ -5,33 +5,33 @@ import type {
   RepairContext,
   RepairResult,
   PluginRegistration,
-} from '../types/index.js';
-import { preprocess } from './sanitizer.js';
-import { detectIntent } from './detector.js';
-import { BUILTIN_PASSES } from '../plugins/builtins.js';
-import { xyChartRebuilderPass } from '../rebuilders/xyChartRebuilder.js';
-import { vennRebuilderPass } from '../rebuilders/vennRebuilder.js';
-import { pieRebuilderPass } from '../rebuilders/pieRebuilder.js';
-import { flowchartRebuilderPass } from '../rebuilders/flowchartRebuilder.js';
-import { sequenceRebuilderPass } from '../rebuilders/sequenceRebuilder.js';
-import { classRebuilderPass } from '../rebuilders/classRebuilder.js';
-import { radarRebuilderPass } from '../rebuilders/radarRebuilder.js';
-import { stateRebuilderPass } from '../rebuilders/stateRebuilder.js';
-import { erRebuilderPass } from '../rebuilders/erRebuilder.js';
-import { ganttRebuilderPass } from '../rebuilders/ganttRebuilder.js';
-import { gitGraphRebuilderPass } from '../rebuilders/gitGraphRebuilder.js';
-import { mindmapRebuilderPass } from '../rebuilders/mindmapRebuilder.js';
-import { timelineRebuilderPass } from '../rebuilders/timelineRebuilder.js';
-import { sankeyRebuilderPass } from '../rebuilders/sankeyRebuilder.js';
-import { quadrantRebuilderPass } from '../rebuilders/quadrantRebuilder.js';
-import { journeyRebuilderPass } from '../rebuilders/journeyRebuilder.js';
-import { kanbanRebuilderPass } from '../rebuilders/kanbanRebuilder.js';
-import { treemapRebuilderPass } from '../rebuilders/treemapRebuilder.js';
-import { architectureRebuilderPass } from '../rebuilders/architectureRebuilder.js';
-import { requirementRebuilderPass } from '../rebuilders/requirementRebuilder.js';
+} from "../types/index.js";
+import { preprocess } from "./sanitizer.js";
+import { detectIntent } from "./detector.js";
+import { BUILTIN_PASSES } from "../plugins/builtins.js";
+import { xyChartRebuilderPass } from "../rebuilders/xyChartRebuilder.js";
+import { vennRebuilderPass } from "../rebuilders/vennRebuilder.js";
+import { pieRebuilderPass } from "../rebuilders/pieRebuilder.js";
+import { flowchartRebuilderPass } from "../rebuilders/flowchartRebuilder.js";
+import { sequenceRebuilderPass } from "../rebuilders/sequenceRebuilder.js";
+import { classRebuilderPass } from "../rebuilders/classRebuilder.js";
+import { radarRebuilderPass } from "../rebuilders/radarRebuilder.js";
+import { stateRebuilderPass } from "../rebuilders/stateRebuilder.js";
+import { erRebuilderPass } from "../rebuilders/erRebuilder.js";
+import { ganttRebuilderPass } from "../rebuilders/ganttRebuilder.js";
+import { gitGraphRebuilderPass } from "../rebuilders/gitGraphRebuilder.js";
+import { mindmapRebuilderPass } from "../rebuilders/mindmapRebuilder.js";
+import { timelineRebuilderPass } from "../rebuilders/timelineRebuilder.js";
+import { sankeyRebuilderPass } from "../rebuilders/sankeyRebuilder.js";
+import { quadrantRebuilderPass } from "../rebuilders/quadrantRebuilder.js";
+import { journeyRebuilderPass } from "../rebuilders/journeyRebuilder.js";
+import { kanbanRebuilderPass } from "../rebuilders/kanbanRebuilder.js";
+import { treemapRebuilderPass } from "../rebuilders/treemapRebuilder.js";
+import { architectureRebuilderPass } from "../rebuilders/architectureRebuilder.js";
+import { requirementRebuilderPass } from "../rebuilders/requirementRebuilder.js";
 
 const DEFAULT_OPTIONS: Required<
-  Omit<EngineOptions, 'plugins' | 'disablePasses'>
+  Omit<EngineOptions, "plugins" | "disablePasses">
 > = {
   maxPasses: 5,
   trace: false,
@@ -70,9 +70,9 @@ const REBUILDER_PASSES: RepairPass[] = [
 
 export class MermaidRepairEngine {
   private readonly options: Required<
-    Omit<EngineOptions, 'plugins' | 'disablePasses'>
+    Omit<EngineOptions, "plugins" | "disablePasses">
   > &
-    Pick<EngineOptions, 'plugins' | 'disablePasses'>;
+    Pick<EngineOptions, "plugins" | "disablePasses">;
 
   private readonly rebuilderPasses: RepairPass[];
   private readonly cleanupPasses: RepairPass[];
@@ -90,7 +90,7 @@ export class MermaidRepairEngine {
     const detection = detectIntent(preprocessed);
 
     // Phase 5.2: ถ้า confidence ต่ำมาก ให้ warn และข้าม destructive passes
-    const isLowConfidence = detection?.confidence === 'low';
+    const isLowConfidence = detection?.confidence === "low";
 
     const allRepairs: string[] = [];
     const trace: RepairResult[] = [];
@@ -186,9 +186,6 @@ export class MermaidRepairEngine {
     });
   }
 
-  // ─────────────────────────────────────────────
-  // Phase 2.2: แยก pipeline เป็น rebuilders + cleanup
-  // ─────────────────────────────────────────────
   private buildPassPipeline(options: EngineOptions): {
     rebuilders: RepairPass[];
     cleanup: RepairPass[];
@@ -208,15 +205,13 @@ export class MermaidRepairEngine {
     const cleanupPipeline = [...baseCleanup];
 
     for (const reg of options.plugins) {
-      // plugin ที่เป็น rebuilder → เพิ่มใน rebuilder pipeline
-      // plugin ทั่วไป → เพิ่มใน cleanup pipeline
       const targetPipeline = reg.pass.isRebuilder
         ? rebuilderPipeline
         : cleanupPipeline;
 
-      if (reg.position === 'prepend') {
+      if (reg.position === "prepend") {
         targetPipeline.unshift(reg.pass);
-      } else if (reg.position === 'append') {
+      } else if (reg.position === "append") {
         targetPipeline.push(reg.pass);
       } else if (reg.before) {
         const idx = targetPipeline.findIndex((p) => p.name === reg.before);
@@ -239,9 +234,6 @@ export class MermaidRepairEngine {
     };
   }
 
-  // ─────────────────────────────────────────────
-  // Phase 5.2: ถ้า low confidence → skip destructive passes
-  // ─────────────────────────────────────────────
   private selectPasses(
     canonical: string | undefined,
     passes: RepairPass[],
@@ -249,17 +241,14 @@ export class MermaidRepairEngine {
   ): RepairPass[] {
     let selected = passes;
 
-    // กรอง pass ที่ไม่เกี่ยวกับ diagram ประเภทนี้
     if (canonical) {
       selected = selected.filter(
         (p) => !p.appliesTo || p.appliesTo.includes(canonical as any),
       );
     }
 
-    // ถ้า low confidence → เหลือแค่ safe passes (keyword normalization, beta suffix)
-    // ไม่รัน passes ที่อาจ inject หรือ restructure content โดยไม่แน่ใจ
     if (isLowConfidence) {
-      const SAFE_PASS_NAMES = new Set(['keyword-normalization', 'beta-suffix']);
+      const SAFE_PASS_NAMES = new Set(["keyword-normalization", "beta-suffix"]);
       selected = selected.filter((p) => SAFE_PASS_NAMES.has(p.name));
     }
 
