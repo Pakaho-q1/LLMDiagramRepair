@@ -1,15 +1,26 @@
-'use client';
-import React, { useEffect, useId, useRef, useState } from 'react';
-import mermaid from 'mermaid';
-import { transformMermaid } from './index.js';
-import { isMermaidStreaming, hasMermaidBlock } from './index.js';
+"use client";
+import React, { useEffect, useId, useRef, useState } from "react";
+import mermaid from "mermaid";
+import {
+  transformMermaid,
+  isMermaidStreaming,
+  hasMermaidBlock,
+} from "./index.js";
+import {
+  StreamingTimeoutTracker,
+  getStreamingPartial,
+} from "./core/streaming.js";
 
 mermaid.initialize({
   startOnLoad: false,
-  theme: 'dark',
-  securityLevel: 'strict',
+  theme: "dark",
+  securityLevel: "strict",
   suppressErrorRendering: true,
 });
+
+// ─────────────────────────────────────────────
+// LRU Cache with TTL
+// ─────────────────────────────────────────────
 
 interface CacheItem<V> {
   value: V;
@@ -47,18 +58,55 @@ class LRUCache<K, V> {
 
 const svgCache = new LRUCache<string, string>(100);
 
+// ─────────────────────────────────────────────
+// Phase 3.2: useMermaid hook พร้อม streaming timeout
+// ─────────────────────────────────────────────
+
 function useMermaid(chart: string, id: string) {
-  const [svg, setSvg] = useState('');
+  const [svg, setSvg] = useState("");
   const [error, setError] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
 
+  // Phase 3.2: tracker สำหรับ streaming timeout
+  const trackerRef = useRef(new StreamingTimeoutTracker(10_000));
+  const [streamingTimedOut, setStreamingTimedOut] = useState(false);
+
   const isStreaming = isMermaidStreaming(chart);
 
+  // Phase 3.2: เริ่ม track เมื่อ streaming เริ่ม, reset เมื่อจบ
   useEffect(() => {
-    if (!chart || isStreaming) return;
+    if (isStreaming) {
+      trackerRef.current.start();
 
-    const finalCode = transformMermaid(chart);
+      // ตรวจ timeout ทุก 1 วินาที
+      const intervalId = setInterval(() => {
+        if (trackerRef.current.isTimedOut()) {
+          setStreamingTimedOut(true);
+          clearInterval(intervalId);
+        }
+      }, 1_000);
+
+      return () => clearInterval(intervalId);
+    } else {
+      // streaming จบแล้ว → reset tracker และ timeout state
+      trackerRef.current.reset();
+      setStreamingTimedOut(false);
+    }
+  }, [isStreaming]);
+
+  useEffect(() => {
+    // Phase 3.2: ถ้า streaming timeout → พยายาม render partial content
+    const shouldRenderPartial = isStreaming && streamingTimedOut;
+    const codeToRender = shouldRenderPartial
+      ? getStreamingPartial(chart)
+      : chart;
+
+    if (!codeToRender) return;
+    // ยังไม่ timeout และ streaming ยังดำเนินอยู่ → รอ
+    if (isStreaming && !streamingTimedOut) return;
+
+    const finalCode = transformMermaid(codeToRender);
     if (!finalCode) return;
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -81,7 +129,7 @@ function useMermaid(chart: string, id: string) {
         setSvg(svg);
       } catch (err) {
         if (requestIdRef.current !== currentId) return;
-        console.error('Mermaid render error:', err);
+        console.error("Mermaid render error:", err);
         setError(true);
       }
     }
@@ -89,10 +137,14 @@ function useMermaid(chart: string, id: string) {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [chart, id, isStreaming]);
+  }, [chart, id, isStreaming, streamingTimedOut]);
 
-  return { svg, error, isStreaming };
+  return { svg, error, isStreaming, streamingTimedOut };
 }
+
+// ─────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────
 
 interface Props {
   chart: string;
@@ -100,12 +152,33 @@ interface Props {
 
 export const MermaidDiagram: React.FC<Props> = ({ chart }) => {
   const rawId = useId();
-  const safeId = `mermaid-${rawId.replace(/:/g, '')}`;
-  const { svg, error, isStreaming } = useMermaid(chart, safeId);
+  const safeId = `mermaid-${rawId.replace(/:/g, "")}`;
+  const { svg, error, isStreaming, streamingTimedOut } = useMermaid(
+    chart,
+    safeId,
+  );
 
   if (!chart) return null;
 
-  if (isStreaming || (!svg && !error)) {
+  // กำลัง stream และยังไม่ timeout
+  if (isStreaming && !streamingTimedOut) {
+    return (
+      <div className="animate-pulse text-slate-400 text-sm my-3">
+        Rendering diagram...
+      </div>
+    );
+  }
+
+  // stream timeout แต่ยัง render ไม่ได้ → แสดง warning แทน block ตลอด
+  if (isStreaming && streamingTimedOut && !svg && !error) {
+    return (
+      <div className="text-yellow-400 text-sm my-3">
+        ⏳ Diagram generation timed out — attempting partial render...
+      </div>
+    );
+  }
+
+  if (!svg && !error) {
     return (
       <div className="animate-pulse text-slate-400 text-sm my-3">
         Rendering diagram...

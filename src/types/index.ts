@@ -8,31 +8,31 @@
 // ─────────────────────────────────────────────
 
 export type DiagramKind =
-  | 'flowchart'
-  | 'sequenceDiagram'
-  | 'classDiagram'
-  | 'stateDiagram-v2'
-  | 'erDiagram'
-  | 'journey'
-  | 'gantt'
-  | 'pie'
-  | 'quadrantChart'
-  | 'requirementDiagram'
-  | 'gitGraph'
-  | 'C4Context'
-  | 'mindmap'
-  | 'timeline'
-  | 'zenuml'
-  | 'sankey-beta'
-  | 'xychart-beta'
-  | 'block-beta'
-  | 'packet-beta'
-  | 'kanban'
-  | 'architecture-beta'
-  | 'radar-beta'
-  | 'treemap-beta'
-  | 'venn-beta'
-  | 'unknown';
+  | "flowchart"
+  | "sequenceDiagram"
+  | "classDiagram"
+  | "stateDiagram-v2"
+  | "erDiagram"
+  | "journey"
+  | "gantt"
+  | "pie"
+  | "quadrantChart"
+  | "requirementDiagram"
+  | "gitGraph"
+  | "C4Context"
+  | "mindmap"
+  | "timeline"
+  | "zenuml"
+  | "sankey-beta"
+  | "xychart-beta"
+  | "block-beta"
+  | "packet-beta"
+  | "kanban"
+  | "architecture-beta"
+  | "radar-beta"
+  | "treemap-beta"
+  | "venn-beta"
+  | "unknown";
 
 export interface DiagramTypeEntry {
   keyword: string; // canonical Mermaid keyword
@@ -47,7 +47,7 @@ export interface DiagramTypeEntry {
 export interface DetectionResult {
   kind: DiagramKind;
   canonical: string;
-  confidence: 'high' | 'medium' | 'low';
+  confidence: "high" | "medium" | "low";
   matchedAlias?: string; // alias ที่ตรง (ถ้าไม่ใช่ canonical)
   firstLine: string;
   lineIndex: number;
@@ -138,7 +138,7 @@ export interface EngineOptions {
 export interface PluginRegistration {
   pass: RepairPass;
   /** 'prepend' = วิ่งก่อน built-in, 'append' = วิ่งหลัง built-in */
-  position?: 'prepend' | 'append';
+  position?: "prepend" | "append";
   /** แทรกก่อน pass ชื่อนี้ (ถ้าไม่ระบุ position) */
   before?: string;
   /** แทรกหลัง pass ชื่อนี้ */

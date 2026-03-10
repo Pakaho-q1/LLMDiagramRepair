@@ -1,17 +1,16 @@
 // MermaidBlock.tsx
-import React, { useState, useEffect } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Copy, Check, Maximize2, X } from 'lucide-react';
-import { transformMermaid } from './index.js';
-import { MermaidDiagram } from './MermaidDiagram';
+import React, { useState, useEffect } from "react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Copy, Check, Maximize2, X } from "lucide-react";
+import { MermaidDiagram } from "./MermaidDiagram";
 
 interface Props {
   codeString: string;
 }
 
 export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
-  const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview');
+  const [viewMode, setViewMode] = useState<"preview" | "code">("preview");
   const [copied, setCopied] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,15 +33,15 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         setIsModalOpen(false);
       }
     };
 
     if (isModalOpen) {
-      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener("keydown", handleKeyDown);
     }
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isModalOpen]);
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -73,7 +72,7 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
     const moveY = Math.abs(e.clientY - clickStart.y);
 
     if (moveX < 5 && moveY < 5 && e.target === e.currentTarget) {
-      setIsModalOpen(false); // สั่งปิดหน้าต่าง
+      setIsModalOpen(false);
     }
   };
 
@@ -86,11 +85,11 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
           <div className="relative flex bg-slate-800 rounded-xl p-0.5">
             <div
               className={`absolute top-1 bottom-1 w-1/2 rounded-lg bg-blue-600 transition-all duration-300 ease-in-out ${
-                viewMode === 'preview' ? 'left-1' : 'left-[calc(50%+2px)]'
+                viewMode === "preview" ? "left-1" : "left-[calc(50%+2px)]"
               }`}
             />
             <button
-              onClick={() => setViewMode('preview')}
+              onClick={() => setViewMode("preview")}
               className="relative z-10 px-4 py-1.5 text-xs font-medium text-white transition-opacity duration-200"
             >
               <svg
@@ -115,7 +114,7 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
               </svg>
             </button>
             <button
-              onClick={() => setViewMode('code')}
+              onClick={() => setViewMode("code")}
               className="relative z-10 px-4 py-1.5 text-xs font-medium text-white transition-opacity duration-200"
             >
               <svg
@@ -165,8 +164,7 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
 
           {/* Action Buttons */}
           <div className="flex gap-2">
-            {/* Maximize Button (Show only in preview) */}
-            {viewMode === 'preview' && (
+            {viewMode === "preview" && (
               <button
                 onClick={openModal}
                 className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 transition-all duration-200"
@@ -176,19 +174,18 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
               </button>
             )}
 
-            {/* Copy Button (Show only in code) */}
-            {viewMode === 'code' && (
+            {viewMode === "code" && (
               <button
                 onClick={handleCopy}
                 className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 transition-all duration-200"
               >
                 <div
-                  className={`absolute transition-all duration-200 ${copied ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}
+                  className={`absolute transition-all duration-200 ${copied ? "scale-100 opacity-100" : "scale-75 opacity-0"}`}
                 >
                   <Check size={15} className="text-green-400" />
                 </div>
                 <div
-                  className={`transition-all duration-200 ${copied ? 'scale-75 opacity-0' : 'scale-100 opacity-100'}`}
+                  className={`transition-all duration-200 ${copied ? "scale-75 opacity-0" : "scale-100 opacity-100"}`}
                 >
                   <Copy size={15} className="text-slate-300" />
                 </div>
@@ -201,7 +198,7 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
         <div className="relative overflow-hidden">
           {/* Preview */}
           <div
-            className={`transition-all duration-300 ease-in-out ${viewMode === 'preview' ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 absolute inset-0 pointer-events-none'}`}
+            className={`transition-all duration-300 ease-in-out ${viewMode === "preview" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 absolute inset-0 pointer-events-none"}`}
           >
             <div
               className="p-1 bg-slate-900 cursor-zoom-in"
@@ -213,7 +210,7 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
 
           {/* Code */}
           <div
-            className={`transition-all duration-300 ease-in-out ${viewMode === 'code' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 absolute inset-0 pointer-events-none'}`}
+            className={`transition-all duration-300 ease-in-out ${viewMode === "code" ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 absolute inset-0 pointer-events-none"}`}
           >
             <SyntaxHighlighter
               style={vscDarkPlus}
@@ -222,8 +219,8 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
               customStyle={{
                 margin: 0,
                 borderRadius: 0,
-                background: 'transparent',
-                padding: '1.25rem',
+                background: "transparent",
+                padding: "1.25rem",
               }}
             >
               {codeString}
@@ -238,7 +235,6 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={() => setIsModalOpen(false)}
         >
-          {/* Close Button */}
           <button
             onClick={() => setIsModalOpen(false)}
             className="absolute top-6 right-6 z-50 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
@@ -246,9 +242,8 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
             <X size={24} />
           </button>
 
-          {/* Interactive Area (Pan & Zoom) */}
           <div
-            className={`w-full h-full overflow-hidden flex items-center justify-center ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`w-full h-full overflow-hidden flex items-center justify-center ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
             onClick={(e) => e.stopPropagation()}
             onWheel={handleWheel}
             onPointerDown={handlePointerDown}
@@ -259,8 +254,8 @@ export const MermaidBlock: React.FC<Props> = ({ codeString }) => {
             <div
               style={{
                 transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-                transformOrigin: 'center',
+                transition: isDragging ? "none" : "transform 0.1s ease-out",
+                transformOrigin: "center",
               }}
               className="p-8 bg-slate-900 rounded-xl shadow-2xl"
             >
