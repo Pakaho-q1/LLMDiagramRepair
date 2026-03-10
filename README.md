@@ -30,17 +30,17 @@ This project is a perfect fit if you are building:
 ## **🚀 Installation**
 
 *(Pending NPM Publish)*
-
+```
 npm install llm-diagram-repair  
 \# or  
 yarn add llm-diagram-repair  
 \# or  
 pnpm add llm-diagram-repair
-
+```
 ## **💻 Basic Usage**
 
 ### **1\. Core Engine Usage (Node.js / Vanilla JS)**
-
+```
 import { transformMermaidFull } from 'llm-diagram-repair';
 
 // Mock AI response with errors (unclosed markdown, bad arrows, outdated keywords)  
@@ -63,11 +63,11 @@ console.log(result.code);
 
 console.log(result.wasRepaired); // true  
 console.log(result.repairs); // Array of repair actions performed
-
+```
 ### **2\. Usage with React (Built-in Components)**
 
 The library provides ready-to-use MermaidDiagram and MermaidBlock components for seamless UI integration.
-
+```
 import React from 'react';  
 import { MermaidBlock } from 'llm-diagram-repair/react';
 
@@ -81,11 +81,11 @@ function ChatMessage({ text, isStreaming }) {
     \</div\>  
   );  
 }
-
+```
 ## **🧩 Extensibility**
 
 The system is designed with the **Open/Closed Principle**. You can easily write custom rules to catch and repair new patterns via the Plugin system.
-
+```
 import { MermaidRepairEngine } from 'llm-diagram-repair';
 
 // Create a Plugin to force a specific theme injection  
@@ -102,7 +102,7 @@ const forceDarkThemePass \= {
 
 const engine \= new MermaidRepairEngine().use({ pass: forceDarkThemePass, position: 'prepend' });  
 const result \= engine.transform('flowchart TD\\n A--\>B');
-
+```
 ## **📊 Benchmarks**
 
 Based on vitest bench results:
